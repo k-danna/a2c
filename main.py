@@ -9,7 +9,7 @@ def main():
     #env = gym.make('Pong-v0')
     
     #since we are preprocessing state
-    state_shape = replay_memory(0).process_state(env.reset()).shape
+    state_shape = worker(None).process_state(env.reset()).shape
     agent = worker(model(state_shape, env.action_space.n))
     agent.train(env)
     agent.test(env)

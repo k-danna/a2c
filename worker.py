@@ -12,15 +12,39 @@ class worker():
     def __init__(self, model):
         self.model = model
 
-    def train(self, env, episodes=100000, max_steps=100, 
+    def process_state(self, state):
+        #convert to readable input (n x n matrix)
+        dims = len(state.shape)
+        if dims == 3: #rgb input --> greyscale
+            r, g, b = state[:, :, 0], state[:, :, 1], state[:, :, 2]
+            state = 0.2989 * r + 0.5870 * g + 0.1140 * b
+            w = max(state.shape[0], state.shape[1])
+            state.resize((w,w))
+        elif dims == 2:
+            w = max(state.shape[0], state.shape[1])
+            state.resize((w,w))
+        elif dims == 1:
+            w = int(state.shape[0] / 2)
+            state.resize((w, w))
+        else:
+            misc.fatal_error('state size unsupported: %s' % state.shape)
+        return state
+
+    def to_onehot(self, action, n_actions):
+        oh = [0 for _ in range(n_actions)]
+        oh[action] = 1
+        return oh
+
+    def train(self, env, episodes=10000, max_steps=100, 
             train_interval=20, print_interval=1000):
         misc.debug('training for %s episodes (%s steps max)' 
                 % (episodes, max_steps))
-        batch = replay_memory(env.action_space.n)
+        batch = replay_memory()
+        n_actions = env.action_space.n
         all_stats = []
         for episode in range(episodes):
             done = False
-            state = batch.process_state(env.reset()) #batch does all others
+            state = self.process_state(env.reset())
             step = 0
             reward_sum = 0
             #init a dict of useful measurements
@@ -37,10 +61,21 @@ class worker():
                 next_state, reward, done, _ = env.step(action)
                 reward = 0 if done else reward
 
+                #process observation data
+                #state = self.process_state(state)
+                next_state = self.process_state(next_state)
+                action = self.to_onehot(action, n_actions)
+
+                #propogate and decay rewards backward through time
+                    #if sparse, rewards = np.linspace(last, 0)
+                    #if no rewards in whole batch
+                        #no propogation?
+                    #reward for a state is function of next x rewards
+                        #and next x values predicted for states
+
                 #FIXME: q-learning reward discount
                     #reward = reward + discount * Q(next state)
-                _, value = self.model.action(batch.process_state(
-                        next_state)) #FIXME: double processes next_state
+                _, value = self.model.action(next_state)
                 reward += 0.9 * value
 
                 #add experience to batch
@@ -78,15 +113,14 @@ class worker():
             'step': [],
             'reward': [],
         }
-        batch = replay_memory(env.action_space.n)
         for episode in range(episodes):
             done = False
-            state = batch.process_state(env.reset())
+            state = self.process_state(env.reset())
             reward_sum = 0
             step = 0
             while not done and step < max_steps:
                 #do action
-                action, _ = self.model.action(batch.process_state(state), 
+                action, _ = self.model.action(self.process_state(state), 
                         epsilon=0.0)
                 state, reward, done, _ = env.step(action)
                 
@@ -103,8 +137,7 @@ class worker():
         print(stats.describe().loc[['min', 'max', 'mean', 'std']])
 
 class replay_memory():
-    def __init__(self, n_actions):
-        self.n_actions = n_actions
+    def __init__(self):
         self.states = []
         self.actions = []
         self.rewards = []
@@ -121,13 +154,7 @@ class replay_memory():
         self.size = 0
 
     def add(self, experience):
-        state, action_int, reward, done, next_state = experience
-        
-        #preprocess actions --> onhot, states --> nxn mat
-        action = [0 for _ in range(self.n_actions)]
-        action[action_int] = 0
-        state = self.process_state(state)
-
+        state, action, reward, done, next_state = experience
         self.states.append(state)
         self.actions.append(action)
         self.rewards.append(reward)
@@ -135,37 +162,11 @@ class replay_memory():
         self.next_states.append(next_state)
         self.size += 1
 
-    #FIXME: implement
     def get(self, discount=0.9):
-        #propogate and decay rewards backward through time
-            #if sparse, rewards = np.linspace(last, 0)
-            #if no rewards in whole batch
-                #no propogation?
-            #reward for a state is function of next x rewards
-                #and next x values predicted for states
-
         states = np.asarray(self.states, dtype=np.float32)
         actions = np.asarray(self.actions, dtype=np.float32)
         rewards = np.asarray(self.rewards, dtype=np.float32)
         dones = np.asarray(self.dones, dtype=np.float32)
         next_states = np.asarray(self.next_states, dtype=np.float32)
         return states, actions, rewards, dones, next_states
-
-    def process_state(self, state):
-        #convert to readable input (n x n matrix)
-        dims = len(state.shape)
-        if dims == 3: #rgb input --> greyscale
-            r, g, b = state[:, :, 0], state[:, :, 1], state[:, :, 2]
-            state = 0.2989 * r + 0.5870 * g + 0.1140 * b
-            w = max(state.shape[0], state.shape[1])
-            state.resize((w,w))
-        elif dims == 2:
-            w = max(state.shape[0], state.shape[1])
-            state.resize((w,w))
-        elif dims == 1:
-            w = int(state.shape[0] / 2)
-            state.resize((w, w))
-        else:
-            misc.fatal_error('state size unsupported: %s' % state.shape)
-        return state
 
