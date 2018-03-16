@@ -1,0 +1,5 @@
+
+move batch to worker class
+    currently double processing some states
+
+
