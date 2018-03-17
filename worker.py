@@ -5,6 +5,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' #ignore startup messages
 
 import pandas as pd
 import numpy as np
+import gym
 
 import misc
 
@@ -105,9 +106,16 @@ class worker():
             #stat = pd.DataFrame(data=stat)
             #print(stat.describe().loc[['min', 'max', 'mean', 'std']])
 
-    def test(self, env, episodes=100, max_steps=100):
+    def test(self, env, episodes=100, max_steps=10000, records=4, 
+            out_dir='./logs'):
         misc.debug('testing for %s episodes (%s steps max)' 
                 % (episodes, max_steps))
+        #func that indicates which episodes to record and write
+        vc = lambda n: n in [int(x) for x in np.linspace(episodes-1, 0, 
+                records)] 
+        #wrapper that records episodes
+        env = gym.wrappers.Monitor(env, directory=out_dir, force=False, 
+                video_callable=vc)
         #init a dict of useful measurements
         stats = {
             'step': [],
@@ -118,7 +126,9 @@ class worker():
             state = self.process_state(env.reset())
             reward_sum = 0
             step = 0
-            while not done and step < max_steps:
+            #wrapper fails on reset if game goes past max step
+                #gym imposes internal max step anyways
+            while not done: #and step < max_steps:
                 #do action
                 action, _ = self.model.action(self.process_state(state), 
                         epsilon=0.0)

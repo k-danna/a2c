@@ -7,6 +7,7 @@ class model():
     def __init__(self, state_shape, n_actions):
 
         tf.set_random_seed(42)
+        np.random.seed(42)
 
         def weight(shape):
             return tf.Variable(tf.truncated_normal(shape, stddev=0.1))
