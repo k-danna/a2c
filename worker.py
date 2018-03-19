@@ -172,7 +172,7 @@ class replay_memory():
         self.next_states.append(next_state)
         self.size += 1
 
-    def get(self, discount=0.9):
+    def get(self):
         states = np.asarray(self.states, dtype=np.float32)
         actions = np.asarray(self.actions, dtype=np.float32)
         rewards = np.asarray(self.rewards, dtype=np.float32)

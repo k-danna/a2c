@@ -21,6 +21,25 @@ class model():
             self.action_in = tf.placeholder(tf.float32, [None, n_actions])
             self.keep_prob = tf.placeholder(tf.float32)
 
+        '''
+        #3x3 conv2d, relu, 2x2 maxpool
+        with tf.name_scope('conv_pool'):
+            #filter shape = [height, width, in_channels, 
+            #out_channels]
+            state_in = tf.reshape(self.state_in, (-1,) + state_shape + (1,))
+            out_channels = 4 #FIXME: out_channels hardcoded
+            filter_shape = [3, 3, 1, out_channels]
+            conv_w = tf.Variable(tf.truncated_normal(filter_shape, 
+                    stddev=0.1))
+            conv_b = tf.Variable(tf.constant(0.1, 
+                    shape=[out_channels]))
+            conv = tf.nn.conv2d(state_in, conv_w, 
+                    strides=[1,1,1,1], padding='SAME')
+            relu = tf.nn.relu(conv + conv_b)
+            pool = tf.nn.max_pool(relu, ksize=[1,2,2,1], 
+                    strides=[1,2,2,1], padding='SAME')
+        '''
+
         with tf.name_scope('dense_dropout'):
             n = 512
             flat = tf.contrib.layers.flatten(self.state_in)
@@ -30,12 +49,13 @@ class model():
             dense = tf.nn.relu(tf.matmul(flat, w_dense) + b_dense)
             #FIXME: add dropout
             #drop = tf.nn.dropout(dense, self.keep_prob)
+            drop = dense
 
         with tf.name_scope('classify'):
             w_class = weight([n, n_actions])
             b_class = bias([n_actions])
 
-            self.predictions = tf.matmul(dense, w_class) + b_class
+            self.predictions = tf.matmul(drop, w_class) + b_class
 
         with tf.name_scope('optimize'):
             self.step = tf.Variable(0, trainable=False)
