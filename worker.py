@@ -38,7 +38,7 @@ class worker():
         oh[action] = 1
         return oh
 
-    def train(self, env, episodes=10000, max_steps=100, 
+    def train(self, env, episodes=10000, max_steps=10000, 
             train_interval=20, print_interval=1000):
         misc.debug('training for %s episodes (%s steps max)' 
                 % (episodes, max_steps))
