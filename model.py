@@ -22,27 +22,24 @@ class model():
             self.action_in = tf.placeholder(tf.float32, [None, n_actions])
             self.keep_prob = tf.placeholder(tf.float32)
 
-        #3x3 conv2d, relu, 2x2 maxpool
+        #3x3 conv2d, relu
         with tf.name_scope('conv_pool'):
-            #filter shape = [height, width, in_channels, 
-            #out_channels]
+            #filter shape = [height, width, in_channels, out_channels]
             state_in = tf.reshape(self.state_in, (-1,) + state_shape + (1,))
-            out_channels = 4 #FIXME: out_channels hardcoded
+            out_channels = 16 #FIXME: out_channels hardcoded
             filter_shape = [3, 3, 1, out_channels]
-            conv_w = tf.Variable(tf.truncated_normal(filter_shape, 
+            w_conv = tf.Variable(tf.truncated_normal(filter_shape, 
                     stddev=0.1))
-            conv_b = tf.Variable(tf.constant(0.1, 
+            b_conv = tf.Variable(tf.constant(0.1, 
                     shape=[out_channels]))
-            conv = tf.nn.conv2d(state_in, conv_w, 
+            conv = tf.nn.conv2d(state_in, w_conv, 
                     strides=[1,1,1,1], padding='SAME')
-            relu = tf.nn.relu(conv + conv_b)
-            pool = tf.nn.max_pool(relu, ksize=[1,2,2,1], 
-                    strides=[1,2,2,1], padding='SAME')
+            relu = tf.nn.relu(conv + b_conv)
 
         with tf.name_scope('dense_dropout'):
             n = 512
-            flat = tf.contrib.layers.flatten(self.state_in)
-            w_dense = weight([state_shape[0] * state_shape[1], n])
+            flat = tf.contrib.layers.flatten(relu)
+            w_dense = weight([out_channels * state_shape[0]**2, n])
             b_dense = bias([n])
 
             dense = tf.nn.relu(tf.matmul(flat, w_dense) + b_dense)
@@ -85,10 +82,10 @@ class model():
                     global_step=self.step)
 
         with tf.name_scope('summary'):
-            tf.summary.scalar('1_total_loss', self.loss)
-            tf.summary.scalar('2_value_loss', value_loss)
-            tf.summary.scalar('3_policy_loss', policy_loss)
-            tf.summary.scalar('4_entropy', entropy)
+            tf.summary.scalar('1_total_loss', self.loss / 20)
+            tf.summary.scalar('2_value_loss', value_loss / 20)
+            tf.summary.scalar('3_policy_loss', policy_loss / 20)
+            tf.summary.scalar('4_entropy', entropy / 20)
             self.summaries = tf.summary.merge_all()
 
         self.sess = tf.Session()
