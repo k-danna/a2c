@@ -67,7 +67,6 @@ class worker():
                 reward = 0 if done else reward
 
                 #process observation data
-                #state = self.process_state(state)
                 next_state = self.process_state(next_state)
                 action = self.to_onehot(action, n_actions)
 
@@ -96,7 +95,7 @@ class worker():
         train_secs = train_time % 60
         misc.debug('finished training in %0.3sm %0.3ss (%0.3ss)' % (
                 train_mins, train_secs, train_time))
-        #output training stats
+        #FIXME: output training stats
         #for stat in all_stats:
             #stat = pd.DataFrame(data=stat)
             #print(stat.describe().loc[['min', 'max', 'mean', 'std']])
@@ -125,8 +124,7 @@ class worker():
                 #gym imposes internal max step anyways
             while not done: #and step < max_steps:
                 #do action
-                action, _ = self.model.act(self.process_state(state), 
-                        explore=0.0)
+                action, _ = self.model.act(self.process_state(state))
                 state, reward, done, _ = env.step(action)
                 
                 #update
@@ -171,7 +169,7 @@ class replay_memory():
         self.size += 1
 
     def get(self):
-        #calc advantage
+        #calc advantage and store in the values array
         reward = 0.0
         if not self.dones[-1]:
             reward = self.values[-1]
@@ -183,8 +181,8 @@ class replay_memory():
         states = np.asarray(self.states, dtype=np.float32)
         actions = np.asarray(self.actions, dtype=np.float32)
         rewards = np.asarray(self.rewards, dtype=np.float32)
-        values = np.asarray(self.values, dtype=np.float32)
+        advantages = np.asarray(self.values, dtype=np.float32)
         dones = np.asarray(self.dones, dtype=np.float32)
         next_states = np.asarray(self.next_states, dtype=np.float32)
-        return states, actions, rewards, values, dones, next_states
+        return states, actions, rewards, advantages, dones, next_states
 
