@@ -27,8 +27,10 @@ class worker():
             w = max(state.shape[0], state.shape[1])
             state.resize((w,w))
         elif dims == 1:
+            #FIXME: resizes to incorrect values, etc
+                #should pad to next square number
             w = int(state.shape[0] / 2)
-            state.resize((w, w))
+            state = np.resize(state, (w, w))
         else:
             misc.fatal_error('state size unsupported: %s' % state.shape)
         return state
@@ -42,11 +44,12 @@ class worker():
             train_interval=20, print_interval=1000):
         misc.debug('training for %s episodes (%s steps max)' 
                 % (episodes, max_steps))
-        start_time = time.time()
+        train_start = time.time()
         batch = replay_memory()
         n_actions = env.action_space.n
         all_stats = []
         for episode in range(episodes):
+            episode_start = time.time()
             done = False
             state = self.process_state(env.reset())
             step = 0
@@ -57,9 +60,6 @@ class worker():
                 'reward': [],
                 'loss': [],
             }
-            if episode % print_interval == 0:
-                misc.debug('episode %s' % episode)
-                #self.test(env, episodes=10, max_steps=10000, records=0)
             while not done and step < max_steps:
                 #do action
                 action, value = self.model.act(state)
@@ -88,12 +88,19 @@ class worker():
             stats['reward'].append(reward_sum)
                 
             all_stats.append(stats)
+
+            if (episode+1) % print_interval == 0:
+                episode_time = time.time() - episode_start
+                eta = episode_time * (episodes - episode)
+                misc.debug(('episode %7s: %5s steps in %5.5ss '
+                        + '(ETA: %.3sm %.3ss)') % (
+                        episode+1, step, episode_time, int(eta/60), eta%60))
+                #self.test(env, episodes=10, max_steps=10000, records=0)
         
-        end_time = time.time()
-        train_time = end_time - start_time
-        train_mins = train_time / 60
+        train_time = time.time() - train_start
+        train_mins = int(train_time / 60)
         train_secs = train_time % 60
-        misc.debug('finished training in %0.3sm %0.3ss (%0.3ss)' % (
+        misc.debug('finished training in %0.3sm %0.3ss (%0.5ss)' % (
                 train_mins, train_secs, train_time))
         #FIXME: output training stats
         #for stat in all_stats:
@@ -101,21 +108,25 @@ class worker():
             #print(stat.describe().loc[['min', 'max', 'mean', 'std']])
 
     def test(self, env, episodes=100, max_steps=10000, records=4, 
-            out_dir='./logs'):
+            out_dir='./logs', print_interval=10):
         misc.debug('testing for %s episodes (%s steps max)' 
                 % (episodes, max_steps))
-        #func that indicates which episodes to record and write
-        vc = lambda n: n in [int(x) for x in np.linspace(episodes-1, 0, 
-                records)] 
-        #wrapper that records episodes
-        env = gym.wrappers.Monitor(env, directory=out_dir, force=True, 
-                video_callable=vc)
+
+        if records:
+            #func that indicates which episodes to record and write
+            vc = lambda n: n in [int(x) for x in np.linspace(episodes-1, 0, 
+                    records)] 
+            #wrapper that records episodes
+            env = gym.wrappers.Monitor(env, directory=out_dir, force=True, 
+                    video_callable=vc)
         #init a dict of useful measurements
         stats = {
             'step': [],
             'reward': [],
         }
+        test_start = time.time()
         for episode in range(episodes):
+            episode_start = time.time()
             done = False
             state = self.process_state(env.reset())
             reward_sum = 0
@@ -124,7 +135,8 @@ class worker():
                 #gym imposes internal max step anyways
             while not done: #and step < max_steps:
                 #do action
-                action, _ = self.model.act(self.process_state(state))
+                action, _ = self.model.act(self.process_state(state), 
+                        explore=False)
                 state, reward, done, _ = env.step(action)
                 
                 #update
@@ -135,6 +147,19 @@ class worker():
             stats['step'].append(step)
             stats['reward'].append(reward_sum)
 
+            if (episode+1) % print_interval == 0:
+                episode_time = time.time() - episode_start
+                eta = episode_time * (episodes - episode)
+                misc.debug(('episode %7s: %5s steps in %5.5ss '
+                        + '(ETA: %5.3sm %3.3ss)') % (
+                        episode+1, step, episode_time, int(eta/60), eta%60))
+
+        #timing 
+        test_time = time.time() - test_start
+        test_mins = int(test_time / 60)
+        test_secs = test_time % 60
+        misc.debug('finished testing in %0.3sm %0.3ss (%0.5ss)' % (
+                test_mins, test_secs, test_time))
         #ez output format
         stats = pd.DataFrame(data=stats)
         print(stats.describe().loc[['min', 'max', 'mean', 'std']])
