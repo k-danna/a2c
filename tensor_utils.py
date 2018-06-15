@@ -4,10 +4,12 @@ import math
 
 def weight(shape, conv=False):
     #xavier init from tensorflow contrib layers implementation
-    f = 6.0 if conv else 2.3
+    #f = 6.0 #uniform
+    f = 2.0 #normal
     in_plus_out = shape[-2] + shape[-1]
     std = math.sqrt(f / in_plus_out)
     w = tf.truncated_normal(shape, mean=0.0, stddev=std)
+    #w = tf.random_uniform(shape, minval=-std, maxval=std)
     return tf.Variable(w)
 
 def bias(shape, v=0.0):

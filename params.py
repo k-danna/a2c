@@ -3,6 +3,7 @@
 envs = ['CartPole-v0', 'Acrobot-v1', 'MountainCar-v0', 
         'BipedalWalker-v2', 'Pong-v4', 'SpaceInvaders-v0', 
         'Breakout-v0']
+#all retro envs
 #retro.list_games()
 #retro.list_states(game)
 

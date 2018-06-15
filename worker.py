@@ -83,11 +83,8 @@ class worker():
                 action, value = self.model.act(state)
                 next_state, reward, done, _ = env.step(action)
 
-                #encourage either achieving or avoiding end state
-                    #achieve when given negative rewards
-                    #avoid when given positive rewards
+                #reward modification
                 #reward = 0 if done else reward
-
                 #reward += params.reward_offset
 
                 #process observation data
@@ -132,7 +129,7 @@ class worker():
         train_secs = train_time % 60
         misc.debug('finished training in %0.3sm %0.3ss (%0.5ss)' % (
                 train_mins, train_secs, train_time))
-        #FIXME: output training stats
+        #FIXME: output training stats in better format
         #for stat in all_stats:
             #stat = pd.DataFrame(data=stat)
             #print(stat.describe().loc[['min', 'max', 'mean', 'std']])

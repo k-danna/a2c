@@ -29,10 +29,8 @@ class model():
             episode_count = tf.Variable(0, trainable=False)
             self.episode_count = tf.assign_add(episode_count, 1)
 
-        #DEBUG
-        x = self.state_in
-
         with tf.name_scope('model'):
+            x = self.state_in
             #x = conv_layer(x, (3,3), 16, 'elu')
             x = dense_layer(x, 512, 'elu', keep_prob=self.keep_prob, 
                     drop=True)
@@ -40,28 +38,28 @@ class model():
             #x = dense_layer(x, self.keep_prob, 64, 'elu', drop=True)
 
         with tf.name_scope('policy'):
-            logits_class = dense_layer(x, n_actions)
-            probs_class = tf.nn.softmax(logits_class)
-            logprobs_class = tf.nn.log_softmax(logits_class)
+            logits = dense_layer(x, n_actions)
+            probs = tf.nn.softmax(logits)
+            logprobs = tf.nn.log_softmax(logits)
 
             #openai universe starter agent distribution
-            logits_max = tf.reduce_max(logits_class, [1], keepdims=True)
-            dist = logits_class - logits_max
+            logits_max = tf.reduce_max(logits, [1], keepdims=True)
+            dist = logits - logits_max
 
             #simple distribution with less exploration
-            #dist = logprobs_class
+            #dist = logprobs
 
             action_random = tf.multinomial(dist, 1)
             self.action = tf.squeeze(action_random, [1])
-            self.test_action = tf.argmax(probs_class, axis=1)
+            self.test_action = tf.argmax(probs, axis=1)
 
         with tf.name_scope('value'):
             logit_val = dense_layer(x, 1)
             self.value = tf.reduce_sum(logit_val, axis=1)
 
         with tf.name_scope('loss'):
-            entropy = - tf.reduce_sum(probs_class * logprobs_class)
-            probs_act = tf.reduce_sum(logprobs_class * self.action_in, [1])
+            entropy = - tf.reduce_sum(probs * logprobs)
+            probs_act = tf.reduce_sum(logprobs * self.action_in, [1])
             policy_loss = - tf.reduce_sum(probs_act * self.advantage_in)
             value_loss = 0.5 * tf.reduce_sum(tf.square(
                     self.value - self.reward_in))
