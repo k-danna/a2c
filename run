@@ -1,0 +1,16 @@
+#!/bin/bash
+
+#run graph
+main.py
+
+#convert episodes to mp4s and remove raw records
+python3 playback_movie.py logs/records/*.bk2 >logs/tmp/ffmpeg.out 2>&1
+#rm -f ./logs/*.bk2
+echo '[+] processed episode replays'
+
+#run tensorboard after log file created
+#sleep 5
+echo '[+] tensorboard running'
+tensorboard --logdir='./logs/model' >logs/tmp/tensorboard.out 2>&1
+
+
