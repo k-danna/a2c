@@ -1,6 +1,6 @@
 # a2c
 
-implementation of Asynchronous Methods for Deep Reinforcement Learning, Google DeepMind, 2016 (arxiv:1602.01783v2)
+implementation of synchronous a2c from Asynchronous Methods for Deep Reinforcement Learning, Google DeepMind, 2016 (arxiv:1602.01783v2)
 
 run main.py to replicate results, edit params.py if you want (200 max score)
 
